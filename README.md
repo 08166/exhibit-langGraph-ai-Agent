@@ -44,6 +44,7 @@
 | **Framework** | LangGraph 
 | **LLM** | GPT-4o-mini 
 | **Search** | Tavily API 
+| **streamlit**| frontend
 
 ### 3. 실행 방법
 
