@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from dotenv import load_dotenv
 from langchain_core.runnables import RunnableConfig
-from graphs.graph import main_graph
+from graphs.graph import graph
 
 load_dotenv()
 
@@ -60,7 +60,7 @@ if st.session_state.step == "input":
                     "question": question,
                 }
 
-                for event in main_graph.stream(inputs, config):
+                for event in graph.stream(inputs, config):
                     for node_name, state_update in event.items():
                         if "db_relevance" in state_update:
                             if state_update["db_relevance"] == "yes":
@@ -68,7 +68,7 @@ if st.session_state.step == "input":
                             else:
                                 st.info("No DB data found. Proceeding to Multi-Agent Search...")
 
-                state = main_graph.get_state(config)
+                state = graph.get_state(config)
                 st.session_state.config = config
                 st.session_state.question = question
 
@@ -109,7 +109,7 @@ elif st.session_state.step == "feedback":
         if st.button("새로운 Analyst 구성"):
             if feedback:
                 with st.spinner("Regenerating analysts..."):
-                    main_graph.update_state(
+                    graph.update_state(
                         st.session_state.config,
                         {
                             "human_analyst_feedback": feedback,
@@ -118,18 +118,18 @@ elif st.session_state.step == "feedback":
                         as_node="human_feedback"
                     )
 
-                    for event in main_graph.stream(None, st.session_state.config):
+                    for event in graph.stream(None, st.session_state.config):
                         pass
 
-                    state = main_graph.get_state(st.session_state.config)
+                    state = graph.get_state(st.session_state.config)
                     st.session_state.analysts = state.values.get("analysts", [])
                     st.rerun()
             else:
                 st.warning("Please enter feedback to regenerate analysts.")
 
     with col2:
-        if st.button("Proceed with Research", type="primary"):
-            main_graph.update_state(
+        if st.button("검색", type="primary"):
+            graph.update_state(
                 st.session_state.config,
                 {"human_analyst_feedback": None},
                 as_node="human_feedback"
@@ -148,7 +148,7 @@ elif st.session_state.step == "research":
 
     with st.spinner("병렬 검색 및 데이터 추출 중..."):
         step_count = 0
-        for event in main_graph.stream(None, st.session_state.config):
+        for event in graph.stream(None, st.session_state.config):
             for node_name, _ in event.items():
                 step_count += 1
                 progress = min(step_count / 8, 1.0)
@@ -161,7 +161,7 @@ elif st.session_state.step == "research":
         progress_bar.progress(1.0)
         status_text.success("검색 완료!")
 
-        final_state = main_graph.get_state(st.session_state.config)
+        final_state = graph.get_state(st.session_state.config)
         st.session_state.answer = final_state.values.get("answer", "")
         st.session_state.exhibitions = final_state.values.get("exhibitions", [])
         st.session_state.step = "result"

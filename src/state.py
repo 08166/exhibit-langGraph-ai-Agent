@@ -52,6 +52,7 @@ class GraphState(TypedDict):
     human_analyst_feedback: str
     exhibitions: List[ExhibitionInfo]
     answer: str
+    retry_count: int
 
 
 class GradeDocuments(BaseModel):

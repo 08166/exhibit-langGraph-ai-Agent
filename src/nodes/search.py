@@ -9,13 +9,14 @@ def db_search(state: GraphState):
     """DB 검색 노드"""
     question = state["question"]
     
+    # TODO: DB 검색 기능 추가 예정
     db_results = f'<Document source="database"/>\nNo database results for: {question}\n</Document>'
     
     return {"db_results": db_results}
 
 
 def search_tavily(state: GraphState):
-    """Tavily 웹 검색 노드 - 개선된 검색"""
+    """Tavily 웹 검색 노드"""
     question = state["question"]
     current_year = datetime.now().year
     
@@ -35,7 +36,6 @@ def search_tavily(state: GraphState):
                     query=query,
                     max_results=5,
                     search_depth="advanced",
-                    # include_domains 제거! → 전체 웹 검색
                 )
                 results = search_results.get("results", [])
                 all_results.extend(results)
@@ -67,7 +67,7 @@ def search_tavily(state: GraphState):
 
 
 def search_gpt(state: GraphState):
-    """GPT 추가 정보 - 검색 결과 기반으로만"""
+    """GPT 추가 정보 """
     question = state["question"]
     context = state.get("context", [])
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -112,6 +112,7 @@ def transform_query(state: GraphState):
     """검색 쿼리 변환 노드"""
     question = state["question"]
     current_year = datetime.now().year
+    retry_count = state.get("retry_count", 0)
     
     llm = get_llm_model()
     prompt = f"""The previous search didn't return relevant results.
@@ -126,4 +127,4 @@ Return only the improved search query (no explanation)."""
     response = llm.invoke([HumanMessage(content=prompt)])
     new_query = response.content.strip()
     
-    return {"question": new_query}
+    return {"question": new_query, "retry_count": retry_count + 1}

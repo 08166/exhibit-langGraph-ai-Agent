@@ -1,7 +1,7 @@
 import uuid
 from dotenv import load_dotenv
 from langchain_core.runnables import RunnableConfig
-from graphs.graph import main_graph
+from graphs.graph import graph
 
 load_dotenv()
 
@@ -9,7 +9,7 @@ load_dotenv()
 def save_graph_image(filename: str = "graph.png"):
     """그래프 이미지 저장"""
     try:
-        png_data = main_graph.get_graph().draw_mermaid_png()
+        png_data = graph.get_graph().draw_mermaid_png()
         with open(filename, "wb") as f:
             f.write(png_data)
         print(f"graph Saved to {filename}")
@@ -38,7 +38,7 @@ def run_exhibition_search(question: str, max_analysts: int = 3):
     print("\nStep 1 DB Search & Analyst Generation")
     print("-" * 40)
     
-    for event in main_graph.stream(inputs, config):
+    for event in graph.stream(inputs, config):
         for node_name, state_update in event.items():
             print(f"  - {node_name}: completed")
             
@@ -48,7 +48,7 @@ def run_exhibition_search(question: str, max_analysts: int = 3):
                 if relevance == "no":
                     print("    > Proceeding to Multi-Agent Search...")
 
-    state = main_graph.get_state(config)
+    state = graph.get_state(config)
     
     if state.next == ("human_feedback",):
         analysts = state.values.get("analysts", [])
@@ -66,7 +66,7 @@ def run_exhibition_search(question: str, max_analysts: int = 3):
         if not feedback:
             feedback = None
         
-        main_graph.update_state(
+        graph.update_state(
             config,
             {"human_analyst_feedback": feedback},
             as_node="human_feedback"
@@ -75,11 +75,11 @@ def run_exhibition_search(question: str, max_analysts: int = 3):
         print("\nStep 2 Parallel Search by Analysts")
         print("-" * 40)
         
-        for event in main_graph.stream(None, config):
+        for event in graph.stream(None, config):
             for node_name, _ in event.items():
                 print(f"  - {node_name}: completed")
 
-    final_state = main_graph.get_state(config)
+    final_state = graph.get_state(config)
     answer = final_state.values.get("answer", "")
     exhibitions = final_state.values.get("exhibitions", [])
     

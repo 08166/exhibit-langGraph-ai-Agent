@@ -59,7 +59,7 @@ def search_by_analyst(state):
 
 
 def create_main_graph():
-    """메인 그래프 생성 (인터뷰 제거, 직접 답변)"""
+    """메인 그래프 생성 """
     
     builder = StateGraph(GraphState)
 
@@ -121,4 +121,4 @@ def create_main_graph():
     )
 
 
-main_graph = create_main_graph()
+graph = create_main_graph()

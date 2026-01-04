@@ -4,8 +4,8 @@ from configuration import get_llm_model
 from state import GraphState, GradeDocuments, GradeHallucinations, ExhibitionList
 from prompts import db_grade_prompt, hallucination_prompt
 
+MAX_RETRIES = 10
 
-# 가짜 URL 도메인 목록
 FAKE_DOMAINS = [
     "example.com",
     "example.org", 
@@ -76,6 +76,12 @@ def hallucination_check(state: GraphState):
 
 def route_after_hallucination(state: GraphState):
     """환각 체크 후 라우팅 결정"""
+
+    retry_count = state.get("retry_count", 0)
+
+    if retry_count >= MAX_RETRIES:
+        return "extract_data"
+    
     if state.get("hallucination_score") == "yes":
         return "extract_data"
     else:
