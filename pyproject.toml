@@ -1,0 +1,56 @@
+[project]
+name = "a-langgraph"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "seonho",email = "j76067469@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "langgraph>=1.0.5,<2.0.0",
+    "langchain-community>=0.4.1,<0.5.0",
+    "langchain-openai>=1.1.6,<2.0.0",
+    "tavily-python>=0.7.17,<0.8.0",
+    "python-dotenv>=1.2.1,<2.0.0",
+    "sqlalchemy>=2.0.45,<3.0.0",
+    "pymysql>=1.1.2,<2.0.0",
+    "streamlit>=1.52.2,<2.0.0",
+    "langsmith>=0.5.2,<0.6.0",
+]
+
+[tool.poetry]
+package-mode = false
+
+[project.optional-dependencies]
+dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+
+[tool.ruff]
+lint.select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "D",    # pydocstyle
+    "D401", # First line should be in imperative mood
+    "T201",
+    "UP",
+    
+]
+lint.ignore = [
+    "UP006",
+    "UP007",
+    "UP035",
+    "D417",
+    "E501",
+    "D100", # Missing docstring in public module
+    "D103", # Missing docstring in public function
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+]
