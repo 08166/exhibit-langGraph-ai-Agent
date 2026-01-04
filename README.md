@@ -46,7 +46,7 @@
 | **Search** | Tavily API 
 | **streamlit**| frontend
 
-### 3. 실행 방법
+### 3. 동작 예시
 
 1. https://ai.coffit.today 접속
 2. 지역 및 나라에 대한 전시회 검색
