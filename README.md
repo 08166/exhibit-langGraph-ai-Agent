@@ -4,10 +4,14 @@
 > [open_deep_research](https://github.com/langchain-ai/open_deep_research)를 참조하였습니다 
 
 
-## 추가 된 내용
+## 기존에 부족했던 부분 보강
+1. LangGraph, Langchain 라이브러리 1.0 버전 이상 적용
 1. DB 연동 하여 데이터 검색
 2. 데이터 검증 강화
 3. input, output에 대한 prompt 변경
+
+![데모 영상](https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc)
+<video src="[여기에_복사한_링크_주소_붙여넣기](https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc)" width="100%" controls></video>
 
 ### 문제
 - 현재 사이드 프로젝트로 **해외/국내 전시 통합 앱**을 출시 준비 중입니다.
