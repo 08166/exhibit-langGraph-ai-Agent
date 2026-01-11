@@ -5,10 +5,9 @@
 
 ### 테스트 URL : https://ai.coffit.today
 ## 기존에 부족했던 부분 보강
-1. LangGraph, Langchain 라이브러리 1.0 버전 이상 적용
-1. DB 연동 하여 데이터 검색
-2. 데이터 검증 강화
-3. input, output에 대한 prompt 변경
+1. LangGraph, Langchain 버전 1.0 적용
+2. DB에 적재 된 데이터 조회 및 부족한 데이터 tavily + GPT를 활용하여 데이터 보강
+3. DB + tavily + GPT를 활용한 데이터 수집 후 사용자가 바로 확인 할 수 있도록 prompt 수정
 
 <video src="https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc" width="100%" controls></video>
 
