@@ -3,7 +3,7 @@
 > 테디노트님의 강의 및 코드를 참조하여 구현하였습니다 ([teddylee](https://github.com/teddylee777/langchain-kr/tree/main/17-LangGraph/02-Structures)) </br>
 > [open_deep_research](https://github.com/langchain-ai/open_deep_research)를 참조하였습니다 
 
-
+### 테스트 URL : https://ai.coffit.today
 ## 기존에 부족했던 부분 보강
 1. LangGraph, Langchain 라이브러리 1.0 버전 이상 적용
 1. DB 연동 하여 데이터 검색
