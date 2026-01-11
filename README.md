@@ -10,7 +10,6 @@
 2. 데이터 검증 강화
 3. input, output에 대한 prompt 변경
 
-![데모 영상](https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc)
 <video src="https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc" width="100%" controls></video>
 
 ### 문제
