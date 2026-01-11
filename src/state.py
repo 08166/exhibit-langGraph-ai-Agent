@@ -34,6 +34,7 @@ class ExhibitionInfo(BaseModel):
     style: List[str] = Field(default=[], description="스타일 키워드")
     ticket_url: str = Field(default="", description="예매 링크")
     source_url: str = Field(default="", description="출처 URL")
+    official_website: str = Field(default="", description="공식 홈페이지 URL")
 
 
 class ExhibitionList(BaseModel):

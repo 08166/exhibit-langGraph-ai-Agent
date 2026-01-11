@@ -1,5 +1,5 @@
 from langchain_core.messages import HumanMessage, SystemMessage
-from configuration import get_llm_model
+from configuration import get_llm_gpt
 from state import GraphState, Perspectives
 from prompts import analyst_instructions
 
@@ -13,7 +13,7 @@ def create_analysts(state: GraphState):
     if not question:
         return {"analysts": []}
 
-    llm = get_llm_model()
+    llm = get_llm_gpt()
     structured_llm = llm.with_structured_output(Perspectives)
 
     system_message = analyst_instructions.format(

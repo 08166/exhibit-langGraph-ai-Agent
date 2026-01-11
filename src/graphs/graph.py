@@ -61,26 +61,25 @@ def search_by_analyst(state):
 def create_main_graph():
     """메인 그래프 생성 """
     
-    builder = StateGraph(GraphState)
+    workflow = StateGraph(GraphState)
 
-    builder.add_node("db_search", db_search)
-    builder.add_node("grade_db_results", grade_db_results)
+    workflow.add_node("db_search", db_search)
+    workflow.add_node("grade_db_results", grade_db_results)
     
-    builder.add_node("create_analysts", create_analysts)
-    builder.add_node("human_feedback", human_feedback)
+    workflow.add_node("create_analysts", create_analysts)
     
-    builder.add_node("search_by_analyst", search_by_analyst)
+    workflow.add_node("search_by_analyst", search_by_analyst)
     
-    builder.add_node("hallucination_check", hallucination_check)
-    builder.add_node("transform_query", transform_query)
-    builder.add_node("extract_exhibition_data", extract_exhibition_data)
+    workflow.add_node("hallucination_check", hallucination_check)
+    workflow.add_node("transform_query", transform_query)
+    workflow.add_node("extract_exhibition_data", extract_exhibition_data)
     
-    builder.add_node("generate_answer", generate_answer)
+    workflow.add_node("generate_answer", generate_answer)
 
-    builder.add_edge(START, "db_search")
-    builder.add_edge("db_search", "grade_db_results")
+    workflow.add_edge(START, "db_search")
+    workflow.add_edge("db_search", "grade_db_results")
     
-    builder.add_conditional_edges(
+    workflow.add_conditional_edges(
         "grade_db_results",
         route_after_db,
         {
@@ -88,18 +87,16 @@ def create_main_graph():
             "create_analysts": "create_analysts",
         }
     )
-    
-    builder.add_edge("create_analysts", "human_feedback")
-    
-    builder.add_conditional_edges(
-        "human_feedback",
+
+    workflow.add_conditional_edges(
+        "create_analysts",
         initiate_parallel_search,
-        ["create_analysts", "search_by_analyst"]
+        ["search_by_analyst"]  # "create_analysts" 제거
     )
     
-    builder.add_edge("search_by_analyst", "hallucination_check")
+    workflow.add_edge("search_by_analyst", "hallucination_check")
     
-    builder.add_conditional_edges(
+    workflow.add_conditional_edges(
         "hallucination_check",
         route_after_hallucination,
         {
@@ -108,15 +105,14 @@ def create_main_graph():
         }
     )
     
-    builder.add_edge("transform_query", "search_by_analyst")
+    workflow.add_edge("transform_query", "search_by_analyst")
     
-    builder.add_edge("extract_exhibition_data", "generate_answer")
+    workflow.add_edge("extract_exhibition_data", "generate_answer")
     
-    builder.add_edge("generate_answer", END)
+    workflow.add_edge("generate_answer", END)
 
     memory = MemorySaver()
-    return builder.compile(
-        interrupt_before=["human_feedback"],
+    return workflow.compile(
         checkpointer=memory
     )
 

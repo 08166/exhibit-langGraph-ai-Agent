@@ -41,134 +41,101 @@ if st.session_state.step == "input":
     question = st.text_input(
         "어떤 전시 정보를 찾고 계신가요?",
         key="question_input",
-        placeholder="예: 독일 뮌헨에서 열리는 전시회를 찾아줘"
+        placeholder="예: 비엔나에서 볼 수 있는 전시 찾아줘"
     )
 
     if st.button("검색 시작", type="primary"):
         if not question.strip():
             st.warning("질문을 입력해주세요.")
         else:
-            with st.spinner("DB 검색 및 애널리스트 생성 중..."):
-                st.session_state.thread_id = str(uuid.uuid4())
-                
-                config = RunnableConfig(
-                    recursion_limit=20,
-                    configurable={"thread_id": st.session_state.thread_id}
-                )
-
-                inputs = {
-                    "question": question,
-                }
-
-                for event in graph.stream(inputs, config):
-                    for node_name, state_update in event.items():
-                        if "db_relevance" in state_update:
-                            if state_update["db_relevance"] == "yes":
-                                st.success("Found relevant data in DB!")
-                            else:
-                                st.info("No DB data found. Proceeding to Multi-Agent Search...")
-
-                state = graph.get_state(config)
-                st.session_state.config = config
-                st.session_state.question = question
-
-                if state.next == ():
-                    st.session_state.answer = state.values.get("answer", "")
-                    st.session_state.exhibitions = state.values.get("exhibitions", [])
-                    st.session_state.step = "result"
-                else:
-                    st.session_state.analysts = state.values.get("analysts", [])
-                    st.session_state.step = "feedback"
-
-                st.rerun()
-
-elif st.session_state.step == "feedback":
-    st.subheader("Step 2: Analysts 검토 (Human-in-the-Loop)")
-
-    st.markdown(f"**Question:** {st.session_state.question}")
-    st.markdown("---")
-
-    st.markdown(f"### Analysts ({len(st.session_state.analysts)})")
-
-    for i, analyst in enumerate(st.session_state.analysts, 1):
-        with st.expander(f"{i}. {analyst.name} - {analyst.role}"):
-            st.markdown(f"**Affiliation:** {analyst.affiliation}")
-            st.markdown(f"**Region:** {analyst.region}")
-            st.markdown(f"**Description:** {analyst.description}")
-
-    st.markdown("---")
-
-    feedback = st.text_area(
-        "피드백 (애널리스트 수정 요청):",
-        placeholder="Example: 한국 전시 전문가를 추가해주세요."
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("새로운 Analyst 구성"):
-            if feedback:
-                with st.spinner("Regenerating analysts..."):
-                    graph.update_state(
-                        st.session_state.config,
-                        {
-                            "human_analyst_feedback": feedback,
-                            "question": st.session_state.question
-                        },
-                        as_node="human_feedback"
-                    )
-
-                    for event in graph.stream(None, st.session_state.config):
-                        pass
-
-                    state = graph.get_state(st.session_state.config)
-                    st.session_state.analysts = state.values.get("analysts", [])
-                    st.rerun()
-            else:
-                st.warning("Please enter feedback to regenerate analysts.")
-
-    with col2:
-        if st.button("검색", type="primary"):
-            graph.update_state(
-                st.session_state.config,
-                {"human_analyst_feedback": None},
-                as_node="human_feedback"
-            )
+            st.session_state.thread_id = str(uuid.uuid4())
+            st.session_state.question = question
             st.session_state.step = "research"
             st.rerun()
 
 elif st.session_state.step == "research":
-    st.subheader("Step 3: 검색 중")
+    st.subheader("Step 2: 검색 중")
 
     progress_bar = st.progress(0)
     status_text = st.empty()
     log_container = st.empty()
+    analysts_container = st.container()
+
+    analysts_container = st.container()
 
     logs = []
 
-    with st.spinner("병렬 검색 및 데이터 추출 중..."):
+    with st.spinner("DB 검색 및 애널리스트 생성 중..."):
+        config = RunnableConfig(
+            recursion_limit=20,
+            configurable={"thread_id": st.session_state.thread_id}
+        )
+
+        inputs = {
+            "question": st.session_state.question,
+        }
+
         step_count = 0
-        for event in graph.stream(None, st.session_state.config):
-            for node_name, _ in event.items():
+        analysts_shown = False
+        
+        for event in graph.stream(inputs, config):
+            for node_name, state_update in event.items():
                 step_count += 1
-                progress = min(step_count / 8, 1.0)
+                progress = min(step_count / 10, 1.0)
                 progress_bar.progress(progress)
 
-                log_entry = f"- {node_name}: completed"
+                log_entry = f"✓ {node_name}"
                 logs.append(log_entry)
                 log_container.code("\n".join(logs), language="text")
+
+                if state_update:
+                    if "db_relevance" in state_update:
+                        if state_update["db_relevance"] == "yes":
+                            status_text.success("DB에서 관련 데이터를 찾았습니다!")
+                        elif state_update["db_relevance"] == "partial":
+                            status_text.info("DB 데이터 부족. Multi-Agent 검색을 진행합니다...")
+                        else:
+                            status_text.info("DB에 데이터가 없습니다. Multi-Agent 검색을 진행합니다...")
+
+                    if "analysts" in state_update and not analysts_shown:
+                        analysts = state_update["analysts"]
+                        st.session_state.analysts = analysts
+                
+                        with analysts_container:
+                            st.markdown("---")
+                            st.markdown(f"### 생성된 Analysts ({len(analysts)}명)")
+                            for i, analyst in enumerate(analysts, 1):
+                                with st.expander(f"{i}. {analyst.name} - {analyst.role}", expanded=True):
+                                    st.markdown(f"**Affiliation:** {analyst.affiliation}")
+                                    st.markdown(f"**Region:** {analyst.region}")
+                                    st.markdown(f"**Description:** {analyst.description}")
+                            st.markdown("---")
+
+                        status_text.info("애널리스트 기반 병렬 검색을 시작합니다...")
+
+                        analysts_shown = True
 
         progress_bar.progress(1.0)
         status_text.success("검색 완료!")
 
-        final_state = graph.get_state(st.session_state.config)
+        final_state = graph.get_state(config)
         st.session_state.answer = final_state.values.get("answer", "")
         st.session_state.exhibitions = final_state.values.get("exhibitions", [])
+        st.session_state.config = config
         st.session_state.step = "result"
         st.rerun()
 
 elif st.session_state.step == "result":
-    st.subheader("Step 4: 결과")
+    st.subheader("Step 3: 결과")
+
+    if st.session_state.analysts:
+        with st.expander(f"생성된 Analysts ({len(st.session_state.analysts)}명)", expanded=False):
+            for i, analyst in enumerate(st.session_state.analysts, 1):
+                st.markdown(f"**{i}. {analyst.name}** - {analyst.role}")
+                st.markdown(f"   - Affiliation: {analyst.affiliation}")
+                st.markdown(f"   - Region: {analyst.region}")
+                st.markdown(f"   - Description: {analyst.description}")
+                st.markdown("---")
 
     st.markdown("### 답변")
     st.markdown(st.session_state.answer)
@@ -219,6 +186,8 @@ elif st.session_state.step == "result":
             links = []
             if ex.ticket_url:
                 links.append(f"[Ticket]({ex.ticket_url})")
+            if ex.official_website:
+                links.append(f"[Website]({ex.official_website})")
             if ex.source_url:
                 links.append(f"[Source]({ex.source_url})")
             if links:
