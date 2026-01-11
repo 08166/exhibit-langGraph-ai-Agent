@@ -11,7 +11,7 @@
 3. input, output에 대한 prompt 변경
 
 ![데모 영상](https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc)
-<video src="[여기에_복사한_링크_주소_붙여넣기](https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc)" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/56e49fc4-9a53-4b90-99b2-c97e2b89ebdc" width="100%" controls></video>
 
 ### 문제
 - 현재 사이드 프로젝트로 **해외/국내 전시 통합 앱**을 출시 준비 중입니다.
