@@ -91,7 +91,7 @@ def create_main_graph():
     workflow.add_conditional_edges(
         "create_analysts",
         initiate_parallel_search,
-        ["search_by_analyst"]  # "create_analysts" 제거
+        ["search_by_analyst"]
     )
     
     workflow.add_edge("search_by_analyst", "hallucination_check")
