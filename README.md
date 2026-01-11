@@ -1,7 +1,13 @@
-b# LangGraph를 활용한 전시 정보 검색 AI Agent
+# LangGraph를 활용한 전시 정보 검색 AI Agent
 
 > 테디노트님의 강의 및 코드를 참조하여 구현하였습니다 ([teddylee](https://github.com/teddylee777/langchain-kr/tree/main/17-LangGraph/02-Structures)) </br>
 > [open_deep_research](https://github.com/langchain-ai/open_deep_research)를 참조하였습니다 
+
+
+## 추가 된 내용
+1. DB 연동 하여 데이터 검색
+2. 데이터 검증 강화
+3. input, output에 대한 prompt 변경
 
 ### 문제
 - 현재 사이드 프로젝트로 **해외/국내 전시 통합 앱**을 출시 준비 중입니다.
@@ -61,8 +67,3 @@ b# LangGraph를 활용한 전시 정보 검색 AI Agent
 3. **Self-Correction Pattern**: 재시도 코드
 4. **TypedDict vs Pydantic**: 상태 관리는 TypedDict, LLM 출력은 Pydantic
 
-### 이후 개선 목표
-- redis를 활용한 검색결과 캐싱
-- 비동기 처리를 통한 데이터 로딩 속도 최적화
-- 생성된 애널리스트를 비교하여 성능 향상
-- DB 연동하여 필드 별로 없는 데이터를 적재할 수 있도록 구현
