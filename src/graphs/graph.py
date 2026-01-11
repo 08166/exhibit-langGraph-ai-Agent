@@ -67,7 +67,6 @@ def create_main_graph():
     workflow.add_node("grade_db_results", grade_db_results)
     
     workflow.add_node("create_analysts", create_analysts)
-    workflow.add_node("human_feedback", human_feedback)
     
     workflow.add_node("search_by_analyst", search_by_analyst)
     
@@ -88,13 +87,11 @@ def create_main_graph():
             "create_analysts": "create_analysts",
         }
     )
-    
-    workflow.add_edge("create_analysts", "human_feedback")
-    
+
     workflow.add_conditional_edges(
-        "human_feedback",
+        "create_analysts",
         initiate_parallel_search,
-        ["create_analysts", "search_by_analyst"]
+        ["search_by_analyst"]  # "create_analysts" 제거
     )
     
     workflow.add_edge("search_by_analyst", "hallucination_check")
@@ -116,7 +113,6 @@ def create_main_graph():
 
     memory = MemorySaver()
     return workflow.compile(
-        interrupt_before=["human_feedback"],
         checkpointer=memory
     )
 
