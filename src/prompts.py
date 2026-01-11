@@ -1,3 +1,6 @@
+from constants import get_exclude_list_string, get_keyword_list_string
+
+
 analyst_instructions = """You are tasked with creating a set of AI analyst personas for an Art Exhibition Research System.
 Follow these instructions carefully:
 1. First, review the research topic:
@@ -56,7 +59,7 @@ Please reformulate this into a better search query that might find:
 db_grade_prompt = """You are evaluating if database search results are relevant to the user's question.
 
 Give 'yes' if:
-- The results contain actual exhibition data (titles, dates, locations)
+- The results contain actual exhibition data (title, date, location, description, keywords)
 - The data matches the user's query
 
 Give 'no' if:
@@ -110,3 +113,172 @@ For each exhibition, provide:
 - Artist Information (only if confirmed)
 - Source URL (required)
 If you cannot find verified information for a topic, honestly state that the search did not return reliable results and suggest the user search directly on museum websites."""
+
+slq_prompt = """You are a MySQL expert. Generate a SQL query to answer the user's question.
+
+Database schema:
+{table_info}
+
+IMPORTANT INSTRUCTIONS:
+1. ALWAYS prioritize 'exhibit' table - this contains exhibition titles, artists, descriptions
+2. JOIN with 'exhibit_halls' table to get venue location/hours information
+3. Use these columns:
+    - exhibit: title, ticket_url, description, poster_url, start_date, end_date, status
+    - exhibit_hall: name, country, city, address, hours, closed_days, phone, website
+4. Filter for ONGOING exhibitions (status='ONGOING' or end_date >= CURDATE())
+5. LIMIT to {top_k} results
+6. Output ONLY the SQL query starting with "SQLQuery:"
+
+Example query structure:
+SQLQuery: SELECT e.title, e.description, e.start_date, e.end_date, h.name, h.country, h.city, h.address, h.hours, h.website 
+FROM exhibit e 
+JOIN exhibit_hall h ON e.exhibit_hall_id = h.id 
+WHERE h.country LIKE '%keyword%' AND e.status='ONGOING' 
+LIMIT {top_k}
+
+User question: {input}
+Dialect: {dialect}
+
+SQLQuery:"""
+
+search_expansion_prompt = """Based on the search results below, provide additional context about the exhibitions.
+
+Search Results:
+{context_str}
+
+Question: {question}
+
+RULES:
+1. Only elaborate on information that exists in the search results
+2. Do not add new exhibitions that are not in the search results
+3. Keep your response factual and based on the sources
+
+Answer in Korean."""
+
+search_fallback_prompt = """The web search did not return any results for: {question}
+
+Since no search results were found, please:
+1. Suggest official museum/gallery websites to check for {question}
+2. Do NOT fabricate or make up exhibition names
+3. Honestly state that specific exhibition information could not be found
+
+Answer in Korean."""
+
+query_rewrite_prompt = """The previous search didn't return relevant results.
+
+Original question: {question}
+
+Create a more specific search query for finding art exhibitions.
+Focus on: official museum names, {current_year}-{next_year} dates, specific locations.
+
+Return only the improved search query (no explanation)."""
+
+_keyword_list = get_keyword_list_string()
+_exclude_list = get_exclude_list_string()
+exhibition_extract_prompt = f"""Extract VERIFIED art/exhibition information ONLY from the provided sources.
+
+TODAY'S DATE: {{current_date}}
+CURRENT YEAR: {{current_year}}
+
+## Source Documents
+{{context_str}}
+
+## User Question
+{{question}}
+
+## CRITICAL FILTERING RULES
+
+{_keyword_list}
+
+### STRICTLY EXCLUDE these types:
+{_exclude_list}
+
+### Extraction Rules:
+1. ONLY extract **art, museum, gallery exhibitions**
+2. MUST match at least ONE category from GENRE or STYLE above
+3. Every exhibition MUST have a verifiable `source_url`
+4. If period contains years 2020-2023 WITHOUT 2024+, SKIP it (old exhibitions)
+5. Do NOT guess or infer - only use explicit information from sources
+6. **ABSOLUTELY NO PLACEHOLDERS OR FAKE DATA**:
+    - DO NOT use: "XXX", "XXXX", "N/A", "TBD", "미정", "정보 없음"
+    - DO NOT use: "1-1-1", "123-456-7890", "+81-XX-XXXX-XXXX"
+    - DO NOT invent phone numbers, addresses, or contact info
+    - If information is NOT explicitly stated in sources, leave field EMPTY ("")
+7. Do NOT guess - only use explicit information from sources
+
+### Required Fields:
+- **title**: Exact exhibition name from source
+- **title_en**: English title (if available)
+- **description**: Description from source (not your summary)
+- **period**: Exhibition dates (YYYY-MM-DD format preferred)
+- **location**: Venue name
+- **country**: Country name
+- **city**: City name
+- **artist**: Artist names (if mentioned)
+- **genre**: List of matching GENRE keywords from above list
+- **style**: List of matching STYLE keywords from above list
+- **ticket_url**: Ticket purchase link (if available)
+- **source_url**: REQUIRED - URL where info was found
+- **official_website**: OFFICIAL homepage URL (empty if not found)
+
+
+**REMEMBER**: Empty field is BETTER than fake/guessed data. Quality over completeness.
+Extract ONLY art/cultural exhibitions. Quality over quantity."""
+
+
+final_answer_prompt = """Provide comprehensive exhibition information combining database and web search results.
+
+TODAY'S DATE: {current_date}
+
+## Question
+{question}
+
+## Database Results (Venue + Exhibition Data)
+{db_results}
+
+## Web Search Results
+{context_str}
+
+## Extracted Exhibition Data
+{exhibition_text}
+
+## FORMATTING INSTRUCTIONS
+
+### For each exhibition, provide a MERGED view:
+
+**[Exhibition Number]. 전시 제목**
+- **영문 제목**: [English Title if available]
+- **기간**: YYYY-MM-DD ~ YYYY-MM-DD
+- **장소**: [Venue Name], [City], [Country]
+  - 주소: [Full Address]
+  - 운영시간: [Hours]
+  - 휴무일: [Closed Days]
+  - 연락처: [Phone]
+- **작가**: [Artist Name]
+- **설명**: [Exhibition Description]
+- **장르**: [Genre tags from constants.py]
+- **스타일**: [Style tags from constants.py]
+- **예매**: [Ticket URL]
+- **홈페이지**: [Venue Website]
+- **출처**: [Source URL]
+
+### Parsing DB Results:
+
+If db_results contains tuples from JOIN query:
+- Extract exhibition data (title, description, dates, status)
+- Extract venue data (name, country, city, address, hours, phone, website)
+- MERGE them into a single unified entry per exhibition
+
+### Quality Filters:
+
+INCLUDE:
+- Art, museum, gallery exhibitions
+- Exhibitions matching GENRE/STYLE from constants.py
+- Current/upcoming exhibitions (2025-2026)
+
+EXCLUDE:
+- Ended exhibitions (before {current_date})
+- Non-art events (cars, pets, food, tech conferences)
+- Exhibitions without verifiable sources
+
+Provide 5-10 high-quality results. Answer in Korean with clear structure."""

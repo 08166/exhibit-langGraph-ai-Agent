@@ -2,6 +2,7 @@ import uuid
 from dotenv import load_dotenv
 from langchain_core.runnables import RunnableConfig
 from graphs.graph import graph
+from database import db
 
 load_dotenv()
 
@@ -128,6 +129,7 @@ def main():
     answer, exhibitions = run_exhibition_search(question, max_analysts)
     
     return answer, exhibitions
+
 
 
 if __name__ == "__main__":

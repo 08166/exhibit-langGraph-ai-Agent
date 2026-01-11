@@ -1,8 +1,10 @@
 from datetime import datetime
 from langchain_core.messages import HumanMessage
-from configuration import get_llm_model
+from configuration import get_llm_gpt
 from state import GraphState
-from prompts import answer_generation_prompt
+from prompts import final_answer_prompt, slq_prompt
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 
 def generate_answer(state: GraphState):
@@ -14,7 +16,7 @@ def generate_answer(state: GraphState):
     current_date = datetime.now().strftime("%Y-%m-%d")
     current_year = datetime.now().year
     
-    llm = get_llm_model()
+    llm = get_llm_gpt()
     
     exhibition_text = ""
     if exhibitions:
@@ -44,36 +46,23 @@ def generate_answer(state: GraphState):
                     exhibition_text += f"- **Genre:** {', '.join(ex.genre)}\n"
                 if ex.ticket_url:
                     exhibition_text += f"- **Tickets:** {ex.ticket_url}\n"
+                if ex.official_website:
+                    exhibition_text += f"- **Official Website:** {ex.official_website}\n"
                 exhibition_text += f"- **Source:** {ex.source_url}\n"
     
     context_str = "\n\n".join(context) if isinstance(context, list) else context
     
-    prompt = f"""Provide exhibition information based on the user's question.
-
-            TODAY'S DATE: {current_date}
-
-            CRITICAL: 
-            - Only include exhibitions that are CURRENTLY ongoing or UPCOMING
-            - Do NOT include any exhibitions that ended before {current_date}
-            - Only include {current_year} or later exhibitions
-
-            ## Question
-            {question}
-
-            ## Search Results
-            {context_str}
-
-            ## Extracted Exhibition Information
-            {exhibition_text if exhibition_text else 'No extracted information'}
-
-            Based on the above VERIFIED information only, provide a helpful response.
-            If no verified exhibitions were found, suggest:
-            1. Official museum websites to check
-            2. How to search for accurate information
-            3. Apologize for not finding specific verified results
-
-            Answer in Korean."""
+    prompt = PromptTemplate.from_template(final_answer_prompt)
     
-    response = llm.invoke([HumanMessage(content=prompt)])
+    chain = prompt | llm | StrOutputParser()
+
+    answer = chain.invoke({
+        "question": question,
+        "db_results": db_results,
+        "context_str": context_str,
+        "exhibition_text": exhibition_text,
+        "current_date": current_date,
+        "current_year": current_year,
+    })
     
-    return {"answer": response.content}
+    return {"answer": answer.strip()}

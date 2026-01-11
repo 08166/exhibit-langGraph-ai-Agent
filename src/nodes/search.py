@@ -1,16 +1,58 @@
 from datetime import datetime
+from database import db
 from tavily import TavilyClient
-from langchain_core.messages import HumanMessage
-from configuration import get_llm_model, get_tavily_api_key
+from configuration import get_llm_gpt, get_tavily_api_key
+from prompts import query_rewrite_prompt, search_fallback_prompt, search_expansion_prompt, slq_prompt
 from state import GraphState
-
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 def db_search(state: GraphState):
     """DB 검색 노드"""
     question = state["question"]
+    llm = get_llm_gpt()
     
-    # TODO: DB 검색 기능 추가 예정
-    db_results = f'<Document source="database"/>\nNo database results for: {question}\n</Document>'
+    try:
+        table_info = db.get_table_info()
+        
+        prompt = PromptTemplate.from_template(slq_prompt).partial(
+            dialect=db.dialect,
+            top_k=10,
+            table_info=table_info
+        )
+        
+        chain = prompt | llm | StrOutputParser()
+        sql_response = chain.invoke({"input": question})
+        
+        sql_query = None
+        if "SQLQuery:" in sql_response:
+            sql_query = sql_response.split("SQLQuery:")[-1].strip()
+        elif "```sql" in sql_response.lower():
+            sql_query = sql_response.split("```sql")[-1].split("```")[0].strip()
+        elif "```" in sql_response:
+            parts = sql_response.split("```")
+            if len(parts) >= 2:
+                sql_query = parts[1].strip()
+        elif "SELECT" in sql_response.upper():
+            sql_query = sql_response[sql_response.upper().find("SELECT"):].strip()
+        
+        if sql_query:
+            sql_query = sql_query.replace("```", "").strip()
+            sql_query = " ".join(sql_query.split())
+            if sql_query.endswith(";"):
+                sql_query = sql_query[:-1]
+            
+            result = db.run(sql_query)
+            
+            if result and result.strip() and result.strip() != "[]":
+                db_results = '<Document source="database"/>\n' + question + '에 대한 DB 검색 결과:\n\n' + result + '\n</Document>'
+            else:
+                db_results = '<Document source="database"/>\nDB에서 "' + question + '" 관련 데이터를 찾지 못했습니다.\n</Document>'
+        else:
+            db_results = '<Document source="database"/>\nSQL 쿼리 생성 실패.\n</Document>'
+    
+    except Exception as e:
+        db_results = '<Document source="database"/>\nDB 검색 오류: ' + str(e) + '\n</Document>'
     
     return {"db_results": db_results}
 
@@ -24,10 +66,12 @@ def search_tavily(state: GraphState):
         tavily_client = TavilyClient(api_key=get_tavily_api_key())
         
         search_queries = [
-            f"{question} {current_year}",
-            f"{question} exhibition art museum",
+            f"{question} "
+            f"Art Exhibition Museum Gallery"
+            f"{current_year} {current_year + 1}"
+            f"Modern Painting, Sculpture, Photography, etc."
         ]
-        
+
         all_results = []
         
         for query in search_queries:
@@ -72,59 +116,41 @@ def search_gpt(state: GraphState):
     context = state.get("context", [])
     current_date = datetime.now().strftime("%Y-%m-%d")
     
-    llm = get_llm_model()
+    llm = get_llm_gpt()
     
     context_str = "\n".join(context) if context else ""
     has_real_results = context_str and "No search results found" not in context_str and "Search failed" not in context_str
     
     if has_real_results:
-        prompt = f"""Based on the search results below, provide additional context about the exhibitions.
-
-        Search Results:
-        {context_str}
-
-        Question: {question}
-
-        RULES:
-        1. Only elaborate on information that exists in the search results
-        2. Do not add new exhibitions that are not in the search results
-        3. Keep your response factual and based on the sources
-
-        Answer in Korean."""
+        prompt = PromptTemplate.from_template(search_expansion_prompt)
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({"context_str": context_str, "question": question})
     else:
-        prompt = f"""The web search did not return any results for: {question}
-
-        Since no search results were found, please:
-        1. Suggest official museum/gallery websites to check for {question}
-        2. Do NOT fabricate or make up exhibition names
-        3. Honestly state that specific exhibition information could not be found
-
-        Answer in Korean."""
+        prompt = PromptTemplate.from_template(search_fallback_prompt)
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({"question": question}, {"current_date": current_date})
     
-    response = llm.invoke([HumanMessage(content=prompt)])
-    
-    formatted = f'<Document source="gpt-reference" date="{current_date}"/>\n{response.content}\n</Document>'
+    formatted = f'<Document source="gpt-reference" date="{current_date}"/>\n{response}\n</Document>'
     
     return {"context": [formatted]}
 
 
 def transform_query(state: GraphState):
     """검색 쿼리 변환 노드"""
+
     question = state["question"]
     current_year = datetime.now().year
     retry_count = state.get("retry_count", 0)
     
-    llm = get_llm_model()
-    prompt = f"""The previous search didn't return relevant results.
+    llm = get_llm_gpt()
 
-Original question: {question}
+    prompt = PromptTemplate.from_template(query_rewrite_prompt)
+    chain = prompt | llm | StrOutputParser()
 
-Create a more specific search query for finding art exhibitions.
-Focus on: official museum names, {current_year}-{current_year+1} dates, specific locations.
-
-Return only the improved search query (no explanation)."""
+    new_query = chain.invoke({
+        "question": question,
+        "current_year": current_year,
+        "next_year": current_year+1,
+    })
     
-    response = llm.invoke([HumanMessage(content=prompt)])
-    new_query = response.content.strip()
-    
-    return {"question": new_query, "retry_count": retry_count + 1}
+    return {"question": new_query.strip(), "retry_count": retry_count + 1}
