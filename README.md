@@ -1,6 +1,7 @@
-# LangGraph를 활용한 전시 정보 검색 AI Agent
+b# LangGraph를 활용한 전시 정보 검색 AI Agent
 
-> 테디노트님의 강의 및 코드를 참조하여 구현하였습니다 ([teddylee](https://github.com/teddylee777/langchain-kr/tree/main/17-LangGraph/02-Structures))
+> 테디노트님의 강의 및 코드를 참조하여 구현하였습니다 ([teddylee](https://github.com/teddylee777/langchain-kr/tree/main/17-LangGraph/02-Structures)) </br>
+> [open_deep_research](https://github.com/langchain-ai/open_deep_research)를 참조하였습니다 
 
 ### 문제
 - 현재 사이드 프로젝트로 **해외/국내 전시 통합 앱**을 출시 준비 중입니다.
